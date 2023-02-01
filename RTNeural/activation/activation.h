@@ -469,6 +469,87 @@ public:
     T outs[size];
     T alpha[size];
 };
+    
+/** Dynamic implementation of a gelu activation layer. */
+template <typename T>
+class GeluActivation final : public Activation<T>
+{
+public:
+    /** Constructs a Gelu activation layer for a given size. */
+    explicit GeluActivation(int size)
+        : Activation<T>(
+            size, [](T x)
+            { return  0.5 * x * (1 + tanh(sqrt(2.0 / PI) * (x + A * x.pow(3)))); },
+            "gelu")
+    {
+    }
+
+    GeluActivation(std::initializer_list<int> sizes)
+        : GeluActivation(*sizes.begin())
+    {
+    }
+
+    /** Performs forward propagation for Gelu activation. */
+    inline void forward(const T* input, T* out) noexcept override
+    {
+        for(int i = 0; i < Layer<T>::out_size; ++i)
+            out[i] =  0.5 * input[i] * (1 + tanh(sqrt(2.0 / PI) * (x + A * input[i].pow(3))));
+    }
+};
+
+
+
+/** Dynamic implementation of a sigmoid activation layer. */
+// f(x) = x · sigmoid(x)
+template <typename T>
+class SwishActivation final : public Activation<T>
+{
+public:
+    /** Constructs a sigmoid activation layer for a given size. */
+    explicit SwishActivation(int size)
+        : Activation<T>(
+            size, [](T x)
+            { return x * sigmoid(x); },
+            "swish")
+    {
+    }
+
+    SwishActivation(std::initializer_list<int> sizes)
+        : SwishActivation(*sizes.begin())
+    {
+    }
+};
+
+/** Static implementation of a sigmoid activation layer. */
+
+// f(x) = x · sigmoid(x)
+template <typename T, int size>
+class SwishActivationT
+{
+public:
+    static constexpr auto in_size = size;
+    static constexpr auto out_size = size;
+
+    SwishActivationT() = default;
+
+    /** Returns the name of this layer. */
+    std::string getName() const noexcept { return "swish"; }
+
+    /** Returns true since this layer is an activation layer. */
+    constexpr bool isActivation() const noexcept { return true; }
+
+    void reset() { }
+
+    /** Performs forward propagation for sigmoid activation. */
+    inline void forward(const T (&ins)[size]) noexcept
+    {
+        for(int i = 0; i < size; ++i)
+            outs[i] = ins[i] * sigmoid(ins[i]);
+    }
+
+    T outs alignas(RTNEURAL_DEFAULT_ALIGNMENT)[size];
+};
+    
 } // namespace RTNeural
 
 #endif // RTNEURAL_USE_EIGEN
